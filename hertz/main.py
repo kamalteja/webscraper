@@ -23,6 +23,7 @@ def match(match_from: List, match_to: List, target_from: str, target_to: str) ->
 
 def main(arguments):
     """entry point of the script"""
+    out_file = f"{os.path.dirname(os.path.abspath(__file__))}/{arguments.out_file}"
     if not arguments.cache:
         print("Fetching data from server", file=sys.stderr)
         res = requests.get(
@@ -31,12 +32,10 @@ def main(arguments):
         if res.status_code != 200:
             return 1
 
-        with open(
-            f"{os.path.dirname(os.path.abspath(__file__))}/{arguments.out_file}", "wb"
-        ) as whandle:
+        with open(out_file, "wb") as whandle:
             whandle.write(res.content)
 
-    with open(arguments.out_file, "r") as rhandle:
+    with open(out_file, "r") as rhandle:
         soup = BeautifulSoup(markup=rhandle, features="html.parser")
         for item in soup.find_all("span", class_="offer_header"):
             locations = item.find_all("a")
