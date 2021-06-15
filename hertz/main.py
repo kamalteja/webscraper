@@ -78,7 +78,7 @@ class Ride:
         self._data = data
 
     def __str__(self) -> str:
-        return f"{self.station} ({self.car})\n    {self.date}"
+        return f"------\n{self.station} ({self.car})\n{self.date}"
 
     @property
     def car(self) -> str:
