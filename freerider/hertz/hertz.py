@@ -1,18 +1,12 @@
 """ Hertz freerider web scrapper"""
-import argparse
-import os
 import re
-import sys
 from abc import abstractmethod
 from typing import List, NamedTuple
 
 import bs4
 import requests
-import requests_cache
 from bs4.element import Tag
-
-requests_cache.install_cache("webscrapper", expire_after=60 * 60)
-
+from freerider.arguments import rider_arguments
 
 HERTZ_FREE_RIDER_URL = "https://www.hertzfreerider.se/unauth/list_transport_offer.aspx"
 DATA_LIST = "ctl00_ContentPlaceHolder1_Display_transport_offer_advanced1_DataList1"
@@ -121,7 +115,7 @@ def get_soup_data(soup: bs4.BeautifulSoup, tag: str, **params):
         yield from data
 
 
-def main(arguments):
+def hertz_rides(arguments):
     """entry point of the script"""
     res = requests.get(HERTZ_FREE_RIDER_URL)
     if res.status_code != 200:
@@ -148,18 +142,4 @@ def main(arguments):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Arguments for Hertz freerider web scrapper"
-    )
-    parser.add_argument(
-        "--out_file",
-        type=str,
-        default="out.html",
-        help="Output file path for caching data",
-    )
-    parser.add_argument(
-        "--from", dest="from_", type=str, nargs="+", help="From location"
-    )
-    parser.add_argument("--to", type=str, nargs="+", help="To location")
-    parser.add_argument("-s", "--station", type=str, nargs="+", help="To location")
-    main(parser.parse_args())
+    hertz_rides(rider_arguments())
