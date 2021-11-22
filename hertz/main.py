@@ -4,10 +4,15 @@ import os
 import re
 import sys
 from abc import abstractmethod
-from typing import List
+from typing import List, NamedTuple
 
 import bs4
 import requests
+import requests_cache
+from bs4.element import Tag
+
+requests_cache.install_cache("webscrapper", expire_after=60 * 60)
+
 
 HERTZ_FREE_RIDER_URL = "https://www.hertzfreerider.se/unauth/list_transport_offer.aspx"
 DATA_LIST = "ctl00_ContentPlaceHolder1_Display_transport_offer_advanced1_DataList1"
@@ -37,17 +42,13 @@ class DateFromTo(RideFromTo):
     @classmethod
     def parse_from_to(cls, data: bs4.element.Tag):
         """Parses date data"""
-        try:
-            return cls(
-                from_=data.find(
-                    "span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_offerDate")
-                ).text,
-                to_=data.find(
-                    "span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_Label1")
-                ).text,
-            )
-        except AttributeError:
-            return cls("", "")
+        from_ = data.find("span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_offerDate"))
+        to_ = data.find("span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_Label1"))
+
+        return cls(
+            from_=from_.next if from_ else "",
+            to_=to_.next if to_ else "",
+        )
 
 
 class StationFromTo(RideFromTo):
@@ -57,7 +58,7 @@ class StationFromTo(RideFromTo):
     def parse_from_to(cls, data: bs4.element.Tag):
         """Parses date data"""
         span = data.find("span", class_="offer_header")
-        if not span:
+        if not span or not isinstance(span, Tag):
             raise ValueError("Unsupported tag received in {cls}")
 
         locations = span.find_all("a")
@@ -71,48 +72,46 @@ class StationFromTo(RideFromTo):
         )
 
 
-class Ride:
+class Ride(NamedTuple):
     """Represents ride information"""
 
-    def __init__(self, data: bs4.element.Tag):
-        self._data = data
+    car: str
+    date: DateFromTo
+    station: StationFromTo
 
     def __str__(self) -> str:
         return f"------\n{self.station} ({self.car})\n{self.date}"
 
-    @property
-    def car(self) -> str:
-        """Return car type"""
-        try:
-            return self._data.find(
-                "span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_offerDescription1")
-            ).text
-        except AttributeError:
-            pass
-        return ""
+    @classmethod
+    def parse_ride(cls, data: bs4.element.Tag):
+        """Parser for ride data"""
+        _car = data.find(
+            "span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_offerDescription1")
+        )
 
-    @property
-    def date(self) -> DateFromTo:
-        """Returns data from - to"""
-        return DateFromTo.parse_from_to(self._data)
-
-    @property
-    def station(self) -> StationFromTo:
-        """Returns station from - to"""
-        return StationFromTo.parse_from_to(self._data)
+        return cls(
+            car=_car.text if _car else "",
+            date=DateFromTo.parse_from_to(data),
+            station=StationFromTo.parse_from_to(data),
+        )
 
 
-def match(match_from: List, match_to: List, target_from: str, target_to: str) -> bool:
-    """Looksup match data to target data and return bool"""
+def match_to_from(match_from: List, match_to: List, ride: Ride) -> bool:
+    """Looksup to-from match data to target data and return bool"""
     if match_from:
         for item in match_from:
-            if item.lower() in target_from.lower():
+            if item.lower() in ride.station.from_.lower():
                 return True
     if match_to:
         for item in match_to:
-            if item.lower() in target_to.lower():
+            if item.lower() in ride.station.to_.lower():
                 return True
     return False
+
+
+def match_station(match_station_: List[str], ride: Ride):
+    """Looksup match station to target station and returns bool"""
+    return match_to_from(match_from=match_station_, match_to=match_station_, ride=ride)
 
 
 def get_soup_data(soup: bs4.BeautifulSoup, tag: str, **params):
@@ -124,35 +123,27 @@ def get_soup_data(soup: bs4.BeautifulSoup, tag: str, **params):
 
 def main(arguments):
     """entry point of the script"""
-    out_file = f"{os.path.dirname(os.path.abspath(__file__))}/{arguments.out_file}"
-    if not arguments.cache:
-        print("Fetching data from server", file=sys.stderr)
-        res = requests.get(HERTZ_FREE_RIDER_URL)
-        if res.status_code != 200:
-            return 1
+    res = requests.get(HERTZ_FREE_RIDER_URL)
+    if res.status_code != 200:
+        return 1
 
-        with open(out_file, "wb") as whandle:
-            whandle.write(res.content)
+    soup = bs4.BeautifulSoup(markup=res.content, features="html.parser")
+    for item in get_soup_data(
+        soup,
+        "table",
+        id=DATA_LIST,
+    ):
+        if not str(item).strip():
+            continue
 
-    with open(out_file, "r") as rhandle:
-        soup = bs4.BeautifulSoup(markup=rhandle, features="html.parser")
-        for item in get_soup_data(
-            soup,
-            "table",
-            id=DATA_LIST,
+        ride = Ride.parse_ride(item)
+
+        if (
+            (not arguments.from_ and not arguments.to and not arguments.station)
+            or match_to_from(arguments.from_, arguments.to, ride)
+            or match_station(arguments.station, ride)
         ):
-            if not str(item).strip():
-                continue
-
-            ride = Ride(item)
-
-            if match(
-                getattr(arguments, "from"),
-                arguments.to,
-                ride.station.from_,
-                ride.station.to_,
-            ):
-                print(ride)
+            print(ride)
     return 0
 
 
@@ -160,13 +151,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Arguments for Hertz freerider web scrapper"
     )
-    parser.add_argument("--cache", action="store_true", help="Use cached data")
     parser.add_argument(
         "--out_file",
         type=str,
         default="out.html",
         help="Output file path for caching data",
     )
-    parser.add_argument("--from", type=str, nargs="+", help="From location")
+    parser.add_argument(
+        "--from", dest="from_", type=str, nargs="+", help="From location"
+    )
     parser.add_argument("--to", type=str, nargs="+", help="To location")
+    parser.add_argument("-s", "--station", type=str, nargs="+", help="To location")
     main(parser.parse_args())
