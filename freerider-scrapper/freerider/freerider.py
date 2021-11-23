@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-""" Hertz freerider web scrapper"""
+""" Freerider web scrapper"""
 
 import os
 
 import requests_cache
 
-from freerider.arguments import rider_arguments
-from freerider.hertz.hertz import hertz_rides
+from freerider.plugins.arguments import rider_arguments
+from freerider.plugins.hertz.hertz import hertz_rides
 
 requests_cache.install_cache(
     f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}/webscrapper",

@@ -6,7 +6,7 @@ from typing import List, NamedTuple
 import bs4
 import requests
 from bs4.element import Tag
-from freerider.arguments import rider_arguments
+from freerider.plugins.arguments import rider_arguments
 
 HERTZ_FREE_RIDER_URL = "https://www.hertzfreerider.se/unauth/list_transport_offer.aspx"
 DATA_LIST = "ctl00_ContentPlaceHolder1_Display_transport_offer_advanced1_DataList1"
