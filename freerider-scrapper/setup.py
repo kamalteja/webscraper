@@ -6,6 +6,6 @@ setup(
     version="1.0",  # Only for egg-info stuff
     packages=find_packages(include=["freerider.*"]),
     scripts=["freerider/freerider.py"],
-    requires=["requests_cache", "beautifulsoup4", "requests"],
+    install_requires=["requests_cache", "beautifulsoup4", "requests"],
     description="Freerider",
 )
