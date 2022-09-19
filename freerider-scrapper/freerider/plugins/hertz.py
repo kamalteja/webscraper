@@ -5,8 +5,7 @@ from typing import List, NamedTuple
 
 import bs4
 import requests
-from bs4.element import Tag
-from freerider.plugins.arguments import rider_arguments
+from freerider.arguments import rider_arguments
 
 HERTZ_FREE_RIDER_URL = "https://www.hertzfreerider.se/unauth/list_transport_offer.aspx"
 DATA_LIST = "ctl00_ContentPlaceHolder1_Display_transport_offer_advanced1_DataList1"
@@ -52,7 +51,7 @@ class StationFromTo(RideFromTo):
     def parse_from_to(cls, data: bs4.element.Tag):
         """Parses date data"""
         span = data.find("span", class_="offer_header")
-        if not span or not isinstance(span, Tag):
+        if not span or not isinstance(span, bs4.element.Tag):
             raise ValueError("Unsupported tag received in {cls}")
 
         locations = span.find_all("a")

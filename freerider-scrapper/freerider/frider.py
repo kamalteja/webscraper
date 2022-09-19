@@ -5,8 +5,8 @@ import os
 
 import requests_cache
 
-from freerider.plugins.arguments import rider_arguments
-from freerider.plugins.hertz.hertz import hertz_rides
+from freerider.arguments import rider_arguments
+from freerider.plugins.hertz import hertz_rides
 
 requests_cache.install_cache(
     f"{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}/webscrapper",
