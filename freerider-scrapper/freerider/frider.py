@@ -14,11 +14,12 @@ requests_cache.install_cache(
 )
 
 
-def main(arguments):
+def main():
     """Runs all the freerider plugins"""
+    arguments = rider_arguments()
     for plugin in [hertz_rides]:
         plugin(arguments)
 
 
 if __name__ == "__main__":
-    main(rider_arguments())
+    main()

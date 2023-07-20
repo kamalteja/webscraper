@@ -1,0 +1,28 @@
+[project]
+name = "freerider"
+version = "0.0.1"
+authors = [
+  { name="Kamal Gurramkonda", email="root@localhost" },
+]
+description = "A webscrapper that looks for freeride cars in various vendor sites, like hertzfreerider."
+readme = "readme.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3.1",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  'requests_cache',
+  'beautifulsoup4',
+  'requests',
+]
+[project.scripts]
+frider = "freerider.frider:main"
+
+
+[project.urls]
+"Homepage" = "https://github.com/kamalteja/webscraper/tree/master/freerider-scrapper"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

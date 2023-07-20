@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 """ Hertz freerider web scrapper"""
 import re
 from abc import abstractmethod
-from typing import List, NamedTuple
+from dataclasses import dataclass
+from typing import List
 
 import bs4
 import requests
@@ -19,9 +22,7 @@ class RideFromTo:
         self.to_ = to_
 
     def __str__(self) -> str:
-        if not self.from_ or not self.from_:
-            return ""
-        return f"{self.from_} - {self.to_}"
+        return f"{self.from_ or '<FROM>'} - {self.to_ or '<TO>'}"
 
     @classmethod
     @abstractmethod
@@ -64,8 +65,8 @@ class StationFromTo(RideFromTo):
             to_=locations[1].text,
         )
 
-
-class Ride(NamedTuple):
+@dataclass
+class Ride:
     """Represents ride information"""
 
     car: str
@@ -90,7 +91,7 @@ class Ride(NamedTuple):
 
 
 def match_to_from(match_from: List, match_to: List, ride: Ride) -> bool:
-    """Looksup to-from match data to target data and return bool"""
+    """Look up to-from match data to target data and return bool"""
     if match_from:
         for item in match_from:
             if item.lower() in ride.station.from_.lower():
@@ -103,7 +104,7 @@ def match_to_from(match_from: List, match_to: List, ride: Ride) -> bool:
 
 
 def match_station(match_station_: List[str], ride: Ride):
-    """Looksup match station to target station and returns bool"""
+    """Looks up match station to target station and returns bool"""
     return match_to_from(match_from=match_station_, match_to=match_station_, ride=ride)
 
 
@@ -116,7 +117,7 @@ def get_soup_data(soup: bs4.BeautifulSoup, tag: str, **params):
 
 def hertz_rides(arguments):
     """entry point of the script"""
-    res = requests.get(HERTZ_FREE_RIDER_URL)
+    res = requests.get(HERTZ_FREE_RIDER_URL, timeout=10)
     if res.status_code != 200:
         return 1
 
