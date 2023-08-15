@@ -65,6 +65,7 @@ class StationFromTo(RideFromTo):
             to_=locations[1].text,
         )
 
+
 @dataclass
 class Ride:
     """Represents ride information"""
@@ -77,7 +78,7 @@ class Ride:
         return f"------\n{self.station} ({self.car})\n{self.date}"
 
     @classmethod
-    def parse_ride(cls, data: bs4.element.Tag):
+    def from_elem(cls, data: bs4.element.Tag):
         """Parser for ride data"""
         _car = data.find(
             "span", id=re.compile(rf"{DATA_LIST}_ctl[0-9]+_offerDescription1")
@@ -130,16 +131,17 @@ def hertz_rides(arguments):
         if not str(item).strip():
             continue
 
-        ride = Ride.parse_ride(item)
+        ride = Ride.from_elem(item)
 
         if (
             (not arguments.from_ and not arguments.to and not arguments.station)
             or match_to_from(arguments.from_, arguments.to, ride)
             or match_station(arguments.station, ride)
         ):
-            print(ride)
+            yield ride
     return 0
 
 
 if __name__ == "__main__":
-    hertz_rides(rider_arguments())
+    for h_ride in hertz_rides(rider_arguments()):
+        print(h_ride)
